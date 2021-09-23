@@ -1,0 +1,107 @@
+import controlP5.*; //import ControlP5 library
+import processing.serial.*;
+
+Serial port;
+int moveCount=0;
+int backCount=0;
+boolean stopflag=false;
+ControlP5 cp5; //create ControlP5 object
+PFont f;
+PFont font;
+
+void setup(){ //same as arduino program
+
+  size(300, 450);    //window size, (width, height)
+  
+  printArray(Serial.list());   //prints all available serial ports
+  
+  port = new Serial(this, "/dev/ttyUSB0", 9600);  //i have connected arduino to com3, it would be different in linux and mac os
+  
+  //lets add buton to empty window
+  
+  cp5 = new ControlP5(this);
+  font = createFont("calibri light bold", 20);    // custom fonts for buttons and title
+  
+  
+  
+  
+  cp5.addButton("move")  //"red" is the name of button
+    
+    //.setCaptionLabel("move")
+    .setPosition(50, 50)  //x and y coordinates of upper left corner of button
+    .setSize(100, 70)      //(width, height)
+    .setFont(font)
+  ;   
+  
+  
+  cp5.addButton("stop")     //"yellow" is the name of button
+    .setPosition(50, 150)  //x and y coordinates of upper left corner of button
+    .setSize(100, 70)      //(width, height)
+    .setFont(font)
+  ;
+
+  cp5.addButton("back")     //"blue" is the name of button
+    .setPosition(50, 250)  //x and y coordinates of upper left corner of button
+    .setSize(100, 70)      //(width, height)
+    .setFont(font)
+  ;
+  
+  cp5.addButton("send")     //"alloff" is the name of button
+    .setPosition(50, 350)  //x and y coordinates of upper left corner of button
+    .setSize(100, 70)      //(width, height)
+    .setFont(font)
+  ;
+}
+
+void draw(){  //same as loop in arduino
+
+  background(150, 0 , 150); // background color of window (r, g, b) or (0 to 255)
+  
+  //lets give title to our window
+  fill(0, 255, 0);               //text color (r, g, b)
+  textFont(font);
+  text("Arduino control", 80, 30);  // ("text", x coordinate, y coordinat)
+  text(moveCount,200,90);
+  text(backCount,200,290);
+  
+}
+
+//lets add some functions to our buttons
+//so whe you press any button, it sends perticular char over serial port
+String stopstring="stop"+1+"\n";
+
+void move(){
+  moveCount=moveCount+1;
+  //port.write(movestring);
+}
+
+void stop(){
+  stopflag=true;
+}
+
+void back(){
+  backCount=backCount+1;
+  //port.write('y');
+}
+
+void send(){
+  if(stopflag==true)
+  {
+   port.write(stopstring);
+   stopflag=false;
+  }
+  else if(moveCount>0)
+  {
+   String movestring="move"+moveCount+"\n";
+   port.write(movestring);
+   moveCount=0;
+   
+  }
+    else if(backCount>0)
+  {
+   String backstring="back"+backCount+"\n";
+   port.write(backCount);
+   backCount=0;
+  }
+    
+}

@@ -1,0 +1,220 @@
+#include <Servo.h>
+int pinLB=6; // define pin6 as left back connect with IN1
+int pinLF=9; // define pin9 as left forward connect with IN2
+int pinRB=10; // define pin10 as right back connect with IN3
+int pinRF=11; // define pin11 as right back connect with IN4
+int pinLInfred=13;
+int pinRinfred=0;
+int soilServo = 3;
+int utralSoincServo = 5;
+int soilHumidity=A2;
+int timer=0;
+unsigned long previousMillis = 0; 
+
+bool moveFlag=false;
+bool stopFlag=true;
+bool backFlag=false;
+//int inputPin = A0; // define ultrasonic receive pin (Echo)
+//int outputPin =A1; // define ultrasonic send pin(Trig)
+
+
+int Fspeedd = 0; // forward distance
+int Rspeedd = 0; // right distance
+int Lspeedd = 0; // left distance
+int directionn = 0; //
+
+int sensorPin = A2; 
+double sensorValue;  
+int limit = 300; 
+
+
+
+const byte numChars = 30;
+char receivedChars[numChars]; // an array to store the received data
+String received; //The data as a string
+boolean newData = false;
+Servo myservo;
+int pos = 90;// new myservo
+int delay_time = 250; // set stable time
+int Fgo = 8;
+int Rgo = 6;
+int Lgo = 4;
+int Bgo = 2;
+// forward
+// turn right
+// turn left
+// back
+void setup()
+{
+    Serial.begin(9600);
+    pinMode(pinLB,OUTPUT);
+    pinMode(pinLF,OUTPUT);
+    pinMode(pinRB,OUTPUT);
+    pinMode(pinRF,OUTPUT);
+    //pinMode(inputPin, INPUT);
+    //pinMode(outputPin, OUTPUT);
+    myservo.attach(3); // define the servo pin(PWM)
+}
+void advance(int a) // forward
+{
+    digitalWrite(pinRB,HIGH);
+    digitalWrite(pinRF,LOW);
+    digitalWrite(pinLB,HIGH);
+    digitalWrite(pinLF,LOW);
+    delay(a * 40);
+}
+
+
+void stopp(int f) //stop
+{
+    digitalWrite(pinRB,HIGH);
+    digitalWrite(pinRF,HIGH);
+    digitalWrite(pinLB,HIGH);
+    digitalWrite(pinLF,HIGH);
+    delay(f * 100);
+}
+void back(int g) //back
+{
+    digitalWrite(pinRB,LOW);
+    digitalWrite(pinRF,HIGH);
+    digitalWrite(pinLB,LOW);
+    digitalWrite(pinLF,HIGH);
+    delay(g * 300);
+}
+
+void ReceiveAndExecute()
+{
+  recvWithEndMarker();
+    if (newData == true)
+    {
+      String instruction = received.substring(0,4);
+      String seconds = received.substring(4,5);
+      timer=seconds.toInt();
+      
+      if(instruction == "move")
+      { 
+        moveFlag=true;
+        stopFlag=false;
+        backFlag=false;   
+      }
+    if(instruction == "stop")
+    {
+         moveFlag=false;
+        stopFlag=true;
+        backFlag=false; 
+    }
+    if(instruction == "back")
+    {
+        moveFlag=false;
+        stopFlag=false;
+        backFlag=true;
+        
+    }
+    newData = false;
+    }  
+}
+    
+
+void soilservo(){
+   for (pos = 90; pos >= 0; pos -= 1) { // goes from 180 degrees to 0 degrees
+    myservo.write(pos);              // tell servo to go to position in variable 'pos'
+    delay(15);                       // waits 15ms for the servo to reach the position
+  }
+     soilmeasure();
+  
+  for (pos = 0; pos <= 90; pos += 1) { // goes from 0 degrees to 180 degrees
+    // in steps of 1 degree
+    myservo.write(pos);              // tell servo to go to position in variable 'pos'
+    delay(15);                       // waits 15ms for the servo to reach the position
+  }
+  
+  
+}
+void soilmeasure() {
+
+ sensorValue = analogRead(sensorPin); 
+ 
+ Serial.println(sensorValue);
+ delay(2000); 
+}
+
+void recvWithEndMarker() 
+{
+  static byte ndx = 0;
+  char endMarker = '\n';
+  char rc;
+  
+  while (Serial.available() > 0 && newData == false) 
+  {
+    rc = Serial.read();
+    
+    if (rc != endMarker) 
+    {
+        receivedChars[ndx] = rc;
+        ndx++;
+        if (ndx >= numChars) 
+        {
+        ndx = numChars - 1;
+        }
+    }
+    else 
+    {
+      receivedChars[ndx] = '\0'; // terminate the string
+      received = String(receivedChars);
+      ndx = 0;
+      newData = true;
+    }
+  }
+}
+
+
+void loop()
+{
+    int listening=0;
+    unsigned long currentMillis = millis();
+    if(stopFlag==true){
+      stopp(1);
+      previousMillis=currentMillis;
+    }else if(moveFlag==true){
+      back(1);
+      if ((currentMillis - previousMillis >= timer*1000)){
+      
+      moveFlag=false;
+      stopFlag=true;
+     previousMillis=currentMillis;
+    }}else if(backFlag=true){
+      soilservo();
+      
+      backFlag=false;
+      stopFlag=true;
+     previousMillis=currentMillis;
+    }
+    
+
+    //move
+    if ((currentMillis - previousMillis >= timer*1000)&&(moveFlag==true)){
+        
+      stopp(1);
+      moveFlag=false;
+      stopFlag=true;
+     previousMillis=currentMillis;
+    }else if((currentMillis - previousMillis >= timer*1000)&&(moveFlag==true)){
+      advance(1);
+      moveFlag=false;
+      stopFlag=true;
+      stopp(1);
+    }else if((currentMillis - previousMillis >= timer*6000)&&(backFlag==true)){
+      stopFlag=true;
+      backFlag==false;
+    }
+
+  
+
+  if(listening==0){
+    ReceiveAndExecute();
+    }
+   
+    
+    
+    
+}
